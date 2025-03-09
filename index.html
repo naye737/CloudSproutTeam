@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charlie Puth World Tour - 티켓 예매</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: url('concert-bg.jpg') center/cover no-repeat fixed; color: white; }
+        .container { max-width: 900px; margin: auto; background: rgba(51, 51, 51, 0.9); padding: 20px; box-shadow: 0px 0px 10px rgba(0,0,0,0.5); text-align: center; }
+        .header img { max-width: 100%; }
+        .details { padding: 20px; }
+        .section { background: rgba(255, 255, 255, 0.1); padding: 20px; margin-top: 20px; border-radius: 10px; }
+        .input-field { width: 80%; padding: 10px; margin: 5px; font-size: 16px; }
+        .btn { display: block; width: 100%; padding: 15px; border: none; font-size: 18px; cursor: pointer; text-align: center; margin-top: 10px; }
+        .btn-primary { background: #ff4c4c; color: white; } .btn-primary:hover { background: #d43f3f; }
+        .btn-secondary { background: #4CAF50; color: white; } .btn-secondary:hover { background: #45a049; }
+        .ticket-result { margin-top: 20px; font-size: 18px; font-weight: bold; background: white; color: black; padding: 15px; display: none; }
+        .seating-area { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; padding: 20px; justify-content: center; align-items: center; }
+        .seat { width: 40px; height: 40px; text-align: center; line-height: 40px; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        .vip { background: gold; color: black; } .r { background: red; color: white; } .s { background: blue; color: white; } .a { background: green; color: white; }
+        .selected { background: black !important; color: white; }
+        .booked { background: darkgray !important; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="charlie-puth-tour.jpg" alt="Charlie Puth World Tour">
+    </div>
+
+    <div class="details">
+        <h1>Charlie Puth World Tour 2025</h1>
+        <p><strong>📅 공연 날짜:</strong> 2025년 5월 10일 PM 7:00 </p>
+        <p><strong>📍 공연 장소:</strong> 고척 SKY 돔</p>
+        <p><strong>🎫 티켓 가격:</strong> VIP 250,000원 | R석 180,000원 | S석 120,000원 | A석 80,000원</p>
+    </div>
+
+    <!-- ✅ 좌석 선택 -->
+    <div class="section">
+        <h2>좌석 선택</h2>
+        <div class="seating-area" id="seatContainer"></div>
+
+        <h2>예매하기</h2>
+        <input type="text" id="reserveName" class="input-field" placeholder="이름 입력 (최대 10자)" maxlength="10" data-type="name">
+        <input type="text" id="reservePhone" class="input-field" placeholder="전화번호 입력 (예: 01012345678)" maxlength="11" data-type="phone">
+        <button class="btn btn-primary" onclick="reserveSeats()">예매하기</button>
+    </div>
+    <!-- ✅ 예매 내역 확인 섹션 -->
+    <div class="section">
+        <h2>예매 내역 확인</h2>
+        <input type="text" id="checkName" class="input-field" placeholder="이름 입력 (최대 10자)" maxlength="10" data-type="name">
+        <input type="text" id="checkPhone" class="input-field" placeholder="전화번호 입력" maxlength="11" data-type="phone">
+        <button class="btn btn-secondary" onclick="fetchMyTickets()">예매 내역 확인</button>
+        <div class="ticket-result" id="ticketResult"></div>
+    </div>
+
+</div>
+
+<script>
+    const API_URL = "https://api.cloudee.today/api";
+    const seatContainer = document.getElementById("seatContainer");
+    let selectedSeats = [];
+    const MAX_SEATS_PER_PERSON = 10; // ✅ 최대 선택 가능 좌석 10개
+
+    let isComposing = false;  // 한글 조합 상태 여부
+
+    // ✅ 입력 필터링 함수 (한글 입력 문제 해결)
+    function validateInput(inputId, type) {
+        let inputField = document.getElementById(inputId);
+
+        // 한글 입력 조합 중이면 필터링 적용 안 함
+        if (isComposing) return;
+
+        let newValue = type === "name"
+            ? inputField.value.replace(/[^가-힣a-zA-Z]/g, '')  // 한글 & 영어만 허용
+            : inputField.value.replace(/[^0-9]/g, '');  // 숫자만 허용
+
+        if (inputField.value !== newValue) {
+            inputField.value = newValue;
+        }
+    }
+
+    // ✅ 한글 조합 시작 시 필터링 중지
+    function startComposition() {
+        isComposing = true;
+    }
+
+    // ✅ 한글 조합 완료 후 필터링 적용
+    function endComposition(event) {
+        isComposing = false;
+        validateInput(event.target.id, event.target.getAttribute("data-type"));
+    }
+
+    // ✅ 이벤트 리스너 추가
+    document.addEventListener("DOMContentLoaded", () => {
+        let nameFields = document.querySelectorAll("input[data-type='name']");
+        let phoneFields = document.querySelectorAll("input[data-type='phone']");
+
+        nameFields.forEach(field => {
+            field.addEventListener("compositionstart", startComposition);
+            field.addEventListener("compositionend", endComposition);
+            field.addEventListener("input", (e) => validateInput(e.target.id, "name"));
+        });
+
+        phoneFields.forEach(field => {
+            field.addEventListener("input", (e) => validateInput(e.target.id, "phone"));
+        });
+    });
+
+
+    function validateReservePhone() {
+        let phoneField = document.getElementById("reservePhone");
+        phoneField.value = phoneField.value.replace(/[^0-9]/g, ''); // 문자 제거
+    }
+
+    // ✅ 예매 조회 입력 필터링
+    function validateReserveName() {
+    let nameField = document.getElementById("reserveName");
+    let cursorPosition = nameField.selectionStart; // 현재 커서 위치 저장
+
+    let newValue = nameField.value.replace(/[^가-힣a-zA-Z]/g, ''); // 숫자 및 특수 문자 제거
+    if (nameField.value !== newValue) {
+        nameField.value = newValue;
+        nameField.setSelectionRange(cursorPosition, cursorPosition); // 커서 위치 유지
+    }
+}
+
+
+    function validateCheckPhone() {
+        let phoneField = document.getElementById("checkPhone");
+        phoneField.value = phoneField.value.replace(/[^0-9]/g, ''); // 문자 제거
+    }
+
+    // ✅ 좌석 예매 함수
+    async function reserveSeats() {
+        const name = document.getElementById("reserveName").value.trim();
+        const phone = document.getElementById("reservePhone").value.trim();
+
+        if (!name || !phone) {
+            alert("이름과 전화번호를 입력하세요!");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/tickets/reserve`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, phone })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert("✅ 예매 성공! 좌석이 예약되었습니다.");
+                window.location.reload();
+            } else {
+                alert("❌ 예매 실패: " + data.message);
+            }
+        } catch (error) {
+            alert("❌ 서버 오류가 발생했습니다.");
+            console.error("🚨 API 요청 실패:", error);
+        }
+    }
+
+// ✅ 예매 내역 조회 함수
+async function fetchMyTickets() {
+        const name = document.getElementById("checkName").value.trim();
+        const phone = document.getElementById("checkPhone").value.trim();
+
+        if (!name || !phone) {
+            alert("이름과 전화번호를 입력하세요!");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/tickets/check?name=${encodeURIComponent(name)}&phone=${phone}`);
+            const data = await response.json();
+
+            if (response.ok) {
+                if (data.seats && data.seats.length > 0) {
+                    let message = `✅ 예매 내역 확인<br>
+                    <strong>이름:</strong> ${name}<br>
+                    <strong>전화번호:</strong> ${phone}<br>
+                    <strong>예매한 좌석:</strong> ${data.seats.join(", ")}<br>
+                    2025년 5월 10일 저녁 7시 고척스카이돔에서 만나요!`;
+
+                    document.getElementById("ticketResult").innerHTML = message;
+                    document.getElementById("ticketResult").style.display = "block";
+                } else {
+                    alert("❌ 예매 내역이 없습니다.");
+                    document.getElementById("ticketResult").style.display = "none";
+                }
+            } else {
+                alert("❌ 예매 내역 조회 실패: " + data.message);
+                document.getElementById("ticketResult").style.display = "none";
+            }
+        } catch (error) {
+            alert("❌ 서버 오류가 발생했습니다.");
+            console.error("🚨 API 요청 실패:", error);
+            document.getElementById("ticketResult").style.display = "none";
+        }
+    }
+
+    function validateReserveName() {
+        document.getElementById("checkName").value = document.getElementById("reserveName").value.replace(/[^가-힣a-zA-Z]/g, '');
+    }
+
+    function validateReservePhone() {
+        document.getElementById("checkPhone").value = document.getElementById("reservePhone").value.replace(/[^0-9]/g, '');
+    }
+
+    async function fetchSeats() {
+        try {
+            const response = await fetch(`${API_URL}/tickets/booked`);
+            const data = await response.json();
+
+            if (response.ok) {
+                data.forEach(seatNumber => {
+                    let seatElement = document.querySelector(`.seat[data-number="${seatNumber}"]`);
+                    if (seatElement) {
+                        seatElement.classList.add("booked");
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("🚨 예매된 좌석 불러오기 실패:", error);
+        }
+    }
+
+    function createSeat(type, index) {
+        const seat = document.createElement("div");
+        seat.classList.add("seat", type);
+        seat.textContent = index;
+        seat.setAttribute("data-number", index);
+
+        seat.addEventListener("click", function () {
+            if (this.classList.contains("booked")) return;
+
+            if (this.classList.contains("selected")) {
+                this.classList.remove("selected");
+            } else {
+                if (selectedSeats.length >= MAX_SEATS_PER_PERSON) {
+                    alert(`❌ 한 사람당 최대 ${MAX_SEATS_PER_PERSON}개 좌석만 선택할 수 있습니다!`);
+                    return;
+                }
+                this.classList.add("selected");
+            }
+
+            updateSelectedSeats();
+        });
+
+        seatContainer.appendChild(seat);
+    }
+
+    function updateSelectedSeats() {
+        selectedSeats = Array.from(document.querySelectorAll(".seat.selected")).map(seat => seat.getAttribute("data-number"));
+    }
+
+    function generateSeating() {
+        const sections = [
+            { type: "vip", count: 50 },
+            { type: "r", count: 50 },
+            { type: "s", count: 50 },
+            { type: "a", count: 50 }
+        ];
+
+        let seatIndex = 1;
+        sections.forEach((section) => {
+            for (let i = 1; i <= section.count; i++) {
+                createSeat(section.type, seatIndex++);
+            }
+        });
+
+        fetchSeats(); // 예매된 좌석 가져오기
+    }
+
+    async function reserveSeats() {
+        const name = document.getElementById("reserveName").value.trim();
+        const phone = document.getElementById("reservePhone").value.trim();
+
+        if (!name || !phone || selectedSeats.length === 0) {
+            alert("이름, 전화번호를 입력하고 좌석을 선택하세요!");
+            return;
+        }
+
+        if (selectedSeats.length > MAX_SEATS_PER_PERSON) {
+            alert(`❌ 한 사람당 최대 ${MAX_SEATS_PER_PERSON}개 좌석만 선택할 수 있습니다.`);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/tickets/reserve`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, phone, seats: selectedSeats })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(`✅ 예매 성공! 선택한 좌석: ${selectedSeats.join(", ")}`);
+                window.location.reload();
+            } else {
+                alert("❌ 예매 실패: " + data.message);
+            }
+        } catch (error) {
+            alert("❌ 서버 오류가 발생했습니다.");
+            console.error("🚨 API 요청 실패:", error);
+        }
+    }
+
+    generateSeating();
+    
+</script>
+
+</body>
+</html>

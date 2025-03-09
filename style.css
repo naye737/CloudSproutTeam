@@ -1,0 +1,31 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    color: #333;
+}
+
+form {
+    margin-top: 20px;
+}
+
+input {
+    display: block;
+    margin: 5px 0;
+    padding: 8px;
+}
+
+button {
+    padding: 8px 12px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.seating-area {
+    background: url('http://global-concert-ticketing.s3-website.region.amazonaws.com/assets/concert-bg.jpg') center/cover no-repeat;
+    padding: 20px;
+    position: relative;
+}
