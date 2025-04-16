@@ -54,7 +54,7 @@ db_config = {
     'host': 'aurora-multi-master-cluster.cluster-cpyewiyugsry.ap-northeast-2.rds.amazonaws.com',
     'port': 3306,
     'user': 'cloudee',
-    'password': 'jehj240424!',
+    'password': '',
     'database': 'concert',  # ✅ 명확하게 사용할 데이터베이스 지정
     'cursorclass': pymysql.cursors.DictCursor,
     'charset': 'utf8mb4',
