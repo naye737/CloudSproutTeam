@@ -5,7 +5,7 @@ resource "aws_rds_cluster" "aurora_cluster" {
   # engine_version         = "8.0.32.mysql_aurora.3.05.2"  # 최신 Aurora MySQL 버전
   database_name           = "concert"
   master_username         = "cloudee"
-  master_password         = "jehj240424!"
+  master_password         = ""
   backup_retention_period = 7
   preferred_backup_window = "02:00-03:00"
   vpc_security_group_ids  = [aws_security_group.rds_sg.id]
